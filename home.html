@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #846868;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      padding: 10px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 10;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header .links a {
+      color: white;
+      margin-left: 20px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .content-wrapper {
+      margin-top: 70px; /* height of header */
+      margin-bottom: 60px; /* height of footer */
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 20px;
+    }
+
+    .movie-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .movie-info {
+      padding: 15px;
+    }
+
+    .movie-info h3 {
+      margin-top: 0;
+    }
+
+    .movie-info p {
+      color: #555;
+    }
+
+    .movie-actions {
+      margin-top: 10px;
+    }
+
+    .movie-actions a {
+      margin-right: 10px;
+      text-decoration: none;
+    }
+
+    .movie-actions button {
+      background-color: #333;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .movie-actions button:hover {
+      background-color: #555;
+    }
+
+    footer {
+      background-color: #333;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎬 My Movie Tracker</h1>
+    <div class="links">
+      <form action="/search" method="GET" style="display: inline-block; margin-right: 20px;">
+        <input type="text" name="query" placeholder="Search movies..." required 
+               style="padding: 5px 10px; border-radius: 4px; border: none;">
+        <button type="submit" 
+                style="padding: 6px 12px; background-color: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          🔍
+        </button>
+      </form>
+      <span>Welcome, {{ session['username'] }}</span>
+      <a href="/wishlist" styles="color:white">My Wishlist</a></li>
+      <button onclick="checkAdmin()" style="padding: 6px 12px; margin-left: 10px; background-color: #444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Admin
+      </button>
+      
+      
+      <button onclick="openAbout()" style="padding: 6px 12px; margin-left: 10px; background-color: #444; color: white; border: none; border-radius: 4px; cursor: pointer;">About Us</button>
+      <a href="/logout">Logout</a>
+    </div>
+  </header>
+  
+  <div class="content-wrapper">
+    <div class="container">
+      {% for movie in movies %}
+        <div class="movie-card">
+          <div class="movie-info">
+            <h3>{{ movie.title }}</h3>
+            <p>{{ movie.description }}</p>
+            <div class="movie-actions">
+              <a href="/movie/{{ movie.id }}"><button>View & Review</button></a>
+              <a href="/add_to_wishlist/{{ movie.id }}"><button>Add to Wishlist</button></a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <footer>
+
+    &copy; 2025 Movie Wishlist & Tracker | @ Dharunsuriya & Dhodduraaj
+  </footer>
+<!-- About Us Side Panel -->
+<div id="aboutPanel" class="side-panel">
+  <div class="side-panel-content">
+    <span class="close-btn" onclick="closeAbout()">×</span>
+    <h2 style="color:aliceblue">About Us</h2>
+    <p>Welcome to Movie Wishlist & Tracker 🎬</p>
+    <p>Welcome to Movie Wishlist & Tracker — your personal hub to manage everything about movies you love!
+      This project is built to help users:</p>
+      
+      <p>🔍 Discover movies added by the admin</p>
+      
+      <p>❤️ Wishlist movies they plan to watch</p>
+      <p>✅ Mark as watched and leave personal ratings & reviews</p>
+      <p>🔐 Sign up / Log in to maintain personalized movie preferences</p>
+      <p>This platform is developed using:</p>    
+      <p> HTML, CSS, JavaScript</p>
+      <p>Backend: Python (Flask)</p>
+      <p>MySQL (phpMyAdmin)</p>
+      <p>Created with dedication by Dharunsuriya T and Dhodduraaj.</p> 
+      <p>contact us on :</p>
+        <p>@ dharunsuriyat</p>
+        <p>@ dhodduraaj</p>
+  </div>
+</div>
+
+<style>
+
+.side-panel {
+  height: 100%;
+  width: 0%;
+  position: fixed;
+  top: 0;
+  right: 0;
+  background-image: linear-gradient(to bottom right, rgb(0, 0, 0), rgb(162, 132, 199));
+  overflow-x: hidden;
+  transition: 0.5s;
+  padding-top: 60px;
+  color: white;
+  z-index: 1000;
+}
+
+.side-panel-content {
+  padding: 20px;
+  max-width: 300px;
+}
+
+.side-panel h2 {
+  margin-top: 0;
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  font-size: 30px;
+  cursor: pointer;
+}
+</style>
+<script>
+  function checkAdmin() {
+    const password = prompt("Enter Admin Password:");
+    if (password === "1001") {
+      window.location.href = "/admin";
+    } else if (password !== null) {
+      alert("Incorrect Password");
+    }
+  }
+</script>
+
+<script>
+  function openAbout() {
+    document.getElementById("aboutPanel").style.width = "300px";
+  }
+
+  function closeAbout() {
+    document.getElementById("aboutPanel").style.width = "0";
+  }
+</script>
+
+</body>
+</html>

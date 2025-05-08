@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+  <h2>{{ movie.title }}</h2>
+  <p>{{ movie.description }}</p>
+
+  <form method="POST">
+    <textarea name="review" placeholder="Write your review"></textarea><br>
+    <input type="submit" value="Submit Review">
+  </form>
+
+  <form method="POST">
+    <label for="status">Choose a status:</label><br>
+    <select name="status" id="status">
+      <option value="Want to Watch">Want to Watch</option>
+      <option value="Watching">Watching</option>
+      <option value="Watched">Watched</option>
+    </select><br><br>
+    <input type="submit" value="Update Status">
+  </form>
+
+  <h3>Reviews:</h3>
+  {% for r in reviews %}
+    <p>{{ r.review }}</p>
+  {% endfor %}
+
+  <a href="/home">Back to Home</a>
+</div>
+</body>
+</html>

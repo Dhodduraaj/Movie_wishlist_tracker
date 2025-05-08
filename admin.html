@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header .links a {
+      color: white;
+      margin-left: 20px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    h2, h3 {
+      color: #333;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+
+    form {
+      margin-bottom: 15px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input[type="submit"] {
+      padding: 8px 16px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #004d99;
+    }
+
+    .delete-button {
+      background-color: #cc0000;
+    }
+
+    .delete-button:hover {
+      background-color: #990000;
+    }
+
+    .movie-item {
+      border-bottom: 1px solid #ddd;
+      padding: 15px 0;
+    }
+
+    .movie-title-desc {
+      margin-bottom: 10px;
+    }
+
+    .movie-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .movie-actions form {
+      display: flex;
+      gap: 5px;
+    }
+
+    .movie-actions input[type="text"] {
+      width: auto;
+      min-width: 200px;
+      margin: 0;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .user-list li {
+      padding: 5px 0;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #0066cc;
+      font-weight: bold;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 Admin Panel</h1>
+  <div class="links">
+    <a href="/home">Home</a>
+    <a href="/logout">Logout</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Add Movie Form -->
+  <h2>Add Movie</h2>
+  <form method="post">
+    <label><strong>Title:</strong></label>
+    <input type="text" name="title" required>
+
+    <label><strong>Description:</strong></label>
+    <textarea name="description" rows="3" required></textarea>
+
+    <input type="submit" value="Add Movie">
+  </form>
+
+  <!-- Existing Movies -->
+  <h3>Existing Movies</h3>
+  <ul>
+    {% for movie in movies %}
+      <li class="movie-item">
+        <div class="movie-title-desc">
+          <strong>{{ movie.title }}</strong> - {{ movie.description }}
+        </div>
+        <div class="movie-actions">
+          <!-- Update Form -->
+          <form action="/update_movie/{{ movie.id }}" method="POST">
+            <input type="text" name="new_description" placeholder="New description" required>
+            <input type="submit" value="Update Description">
+          </form>
+
+          <!-- Delete Form -->
+          <form action="/delete_movie/{{ movie.id }}" method="POST">
+            <input type="submit" value="Delete Movie" class="delete-button">
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <!-- Users -->
+  <h3>Registered Users</h3>
+  <ul class="user-list">
+    {% for user in users %}
+      <li>{{ user.username }} - {{ user.email }}</li>
+    {% endfor %}
+  </ul>
+
+</div>
+
+</body>
+</html>

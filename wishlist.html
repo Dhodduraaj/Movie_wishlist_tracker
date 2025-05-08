@@ -1,0 +1,36 @@
+<!-- templates/wishlist.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Wishlist</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>My Wishlist</h2>
+    {% if wishlist %}
+      <ul>
+        {% for item in wishlist %}
+          <li style="margin-bottom: 20px;">
+            <strong>{{ item.title }}</strong><br>
+            Current Status: <em>{{ item.status }}</em><br><br>
+
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="movie_id" value="{{ item.id }}">
+              <select name="status">
+                <option value="Want to Watch" {% if item.status == 'Want to Watch' %}selected{% endif %}>Want to Watch</option>
+                <option value="Watching" {% if item.status == 'Watching' %}selected{% endif %}>Watching</option>
+                <option value="Watched" {% if item.status == 'Watched' %}selected{% endif %}>Watched</option>
+              </select>
+              <button type="submit">Update</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No movies in your wishlist yet.</p>
+    {% endif %}
+    <a href="/home">Back to Home</a>
+  </div>
+</body>
+</html>
