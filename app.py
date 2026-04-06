@@ -1,16 +1,11 @@
 from flask import Flask, render_template, request, redirect, session, url_for
-import mysql.connector
+from pymongo import MongoClient
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",  # your MySQL password
-    database="movie_tracker"
-)
-cursor = conn.cursor(dictionary=True)
+client = MongoClient('mongodb://localhost:27017/')
+db = client['movie_tracker']
 
 @app.route('/')
 def index():
@@ -22,8 +17,8 @@ def signup():
         uname = request.form['username']
         email = request.form['email']
         pwd = request.form['password']
-        cursor.execute("INSERT INTO users (username, email, password) VALUES (%s, %s, %s)", (uname, email, pwd))
-        conn.commit()
+        user_id = db.users.count_documents({}) + 1
+        db.users.insert_one({'id': user_id, 'username': uname, 'email': email, 'password': pwd})
         return redirect('/login')
     return render_template('signup.html')
 
@@ -33,13 +28,11 @@ def login():
         uname = request.form['username']
         pwd = request.form['password']
 
-        # Always execute and fetch to clear results
-        cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (uname, pwd))
-        user = cursor.fetchone()
-
-        # Admin check (handled after query is fetched)
+        # Admin check
         if uname == 'admin' and pwd == '1001':
             return redirect('/admin')
+
+        user = db.users.find_one({'username': uname, 'password': pwd})
 
         if user:
             session['user_id'] = user['id']
@@ -49,25 +42,12 @@ def login():
             return "Invalid credentials"
     return render_template('login.html')
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",  # Replace with your MySQL password
-        database="movie_tracker"
-    )
-
-
 @app.route('/home')
 def home():
     if 'user_id' not in session:
         return redirect('/login')
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # This returns rows as dictionaries
-    cursor.execute("SELECT * FROM movies")
-    movies = cursor.fetchall()
-    conn.close()
+    movies = list(db.movies.find())
 
     return render_template('home.html', movies=movies)
 
@@ -78,8 +58,7 @@ def search():
     if 'user_id' not in session:
         return redirect('/login')
     
-    cursor.execute("SELECT * FROM movies WHERE title LIKE %s", ('%' + query + '%',))
-    results = cursor.fetchall()
+    results = list(db.movies.find({'title': {'$regex': query, '$options': 'i'}}))
     
     return render_template('home.html', movies=results)
     
@@ -93,16 +72,15 @@ def movie_detail(movie_id):
     if request.method == 'POST':
         if 'review' in request.form:
             review = request.form['review']
-            cursor.execute("INSERT INTO reviews (user_id, movie_id, review) VALUES (%s, %s, %s)", (user_id, movie_id, review))
+            db.reviews.insert_one({'user_id': user_id, 'movie_id': movie_id, 'review': review})
         elif 'status' in request.form:
             status = request.form['status']
-            cursor.execute("REPLACE INTO wishlist (user_id, movie_id, status) VALUES (%s, %s, %s)", (user_id, movie_id, status))
-        conn.commit()
+            db.wishlist.replace_one({'user_id': user_id, 'movie_id': movie_id}, {'user_id': user_id, 'movie_id': movie_id, 'status': status}, upsert=True)
 
-    cursor.execute("SELECT * FROM movies WHERE id=%s", (movie_id,))
-    movie = cursor.fetchone()
-    cursor.execute("SELECT review FROM reviews WHERE movie_id=%s", (movie_id,))
-    reviews = cursor.fetchall()
+    movie = db.movies.find_one({'id': movie_id})
+    if not movie:
+        return "Movie not found", 404
+    reviews = list(db.reviews.find({'movie_id': movie_id}))
     return render_template('movie_detail.html', movie=movie, reviews=reviews)
 
 @app.route('/wishlist', methods=['GET', 'POST'])
@@ -112,54 +90,34 @@ def wishlist():
     user_id = session['user_id']
 
     if request.method == 'POST':
-        movie_id = request.form['movie_id']
+        movie_id = int(request.form['movie_id'])
         new_status = request.form['status']
-        cursor.execute("""
-            UPDATE wishlist 
-            SET status = %s 
-            WHERE user_id = %s AND movie_id = %s
-        """, (new_status, user_id, movie_id))
-        conn.commit()
+        db.wishlist.update_one({'user_id': user_id, 'movie_id': movie_id}, {'$set': {'status': new_status}})
         return redirect('/wishlist')
 
-    cursor.execute("""
-        SELECT m.id, m.title, w.status 
-        FROM wishlist w 
-        JOIN movies m ON w.movie_id = m.id 
-        WHERE w.user_id = %s
-    """, (user_id,))
-    wishlist_items = cursor.fetchall()
+    pipeline = [
+        {'$match': {'user_id': user_id}},
+        {'$lookup': {'from': 'movies', 'localField': 'movie_id', 'foreignField': 'id', 'as': 'movie'}},
+        {'$unwind': '$movie'},
+        {'$project': {'id': '$movie.id', 'title': '$movie.title', 'status': 1}}
+    ]
+    wishlist_items = list(db.wishlist.aggregate(pipeline))
     return render_template('wishlist.html', wishlist=wishlist_items)
-
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",  # Replace with your MySQL password
-        database="movie_tracker"
-    )
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Get movies and users
-    cursor.execute("SELECT * FROM movies")
-    movies = cursor.fetchall()
-    cursor.execute("SELECT * FROM users")
-    users = cursor.fetchall()
+    movies = list(db.movies.find())
+    users = list(db.users.find())
 
     if request.method == 'POST':
         # Adding new movie to the database
         title = request.form['title']
         description = request.form['description']
-        cursor.execute("INSERT INTO movies (title, description) VALUES (%s, %s)", (title, description))
-        conn.commit()
+        movie_id = db.movies.count_documents({}) + 1
+        db.movies.insert_one({'id': movie_id, 'title': title, 'description': description})
 
         return redirect('/admin')
 
-    conn.close()
     return render_template('admin.html', users=users, movies=movies)
 
 
@@ -169,11 +127,9 @@ def update_movie(movie_id):
     new_description = request.form['new_description']
     
     # Update the movie description in the database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE movies SET description = %s WHERE id = %s", (new_description, movie_id))
-    conn.commit()
-    conn.close()
+    result = db.movies.update_one({'id': movie_id}, {'$set': {'description': new_description}})
+    if result.matched_count == 0:
+        return "Movie not found", 404
 
     return redirect('/admin')
 
@@ -181,11 +137,9 @@ def update_movie(movie_id):
 @app.route('/delete_movie/<int:movie_id>', methods=['POST'])
 def delete_movie(movie_id):
     # Delete the movie from the database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM movies WHERE id = %s", (movie_id,))
-    conn.commit()
-    conn.close()
+    result = db.movies.delete_one({'id': movie_id})
+    if result.deleted_count == 0:
+        return "Movie not found", 404
 
     return redirect('/admin')
 
@@ -195,14 +149,16 @@ def add_to_wishlist(movie_id):
         return redirect('/login')
     user_id = session['user_id']
 
+    # Check if movie exists
+    movie = db.movies.find_one({'id': movie_id})
+    if not movie:
+        return "Movie not found", 404
+
     # Check if already in wishlist
-    cursor.execute("SELECT * FROM wishlist WHERE user_id = %s AND movie_id = %s", (user_id, movie_id))
-    existing = cursor.fetchone()
+    existing = db.wishlist.find_one({'user_id': user_id, 'movie_id': movie_id})
     
     if not existing:
-        cursor.execute("INSERT INTO wishlist (user_id, movie_id, status) VALUES (%s, %s, %s)",
-                       (user_id, movie_id, "Want to Watch"))
-        conn.commit()
+        db.wishlist.insert_one({'user_id': user_id, 'movie_id': movie_id, 'status': 'Want to Watch'})
     
     return redirect('/wishlist')
 
@@ -211,14 +167,14 @@ def update_status_page(movie_id):
     if 'user_id' not in session:
         return redirect('/login')
     
+    # Check if movie exists
+    movie = db.movies.find_one({'id': movie_id})
+    if not movie:
+        return "Movie not found", 404
+
     if request.method == 'POST':
         new_status = request.form.get('status')
-        cursor.execute("""
-            UPDATE wishlist 
-            SET status = %s 
-            WHERE user_id = %s AND movie_id = %s
-        """, (new_status, session['user_id'], movie_id))
-        conn.commit()
+        db.wishlist.update_one({'user_id': session['user_id'], 'movie_id': movie_id}, {'$set': {'status': new_status}})
         return redirect('/wishlist')
     
     return render_template('update_status.html', movie_id=movie_id)
