@@ -192,19 +192,6 @@ This project is open source and available under the MIT License.
 **Dhodduraaj**
 - GitHub: [@Dhodduraaj](https://github.com/Dhodduraaj)
 
-## 🎯 Future Enhancements
-
-- [ ] Implement password hashing and encryption
-- [ ] Add movie ratings system
-- [ ] Email verification for user registration
-- [ ] Movie recommendations based on preferences
-- [ ] Social features (follow users, share wishlists)
-- [ ] Mobile-responsive design improvements
-- [ ] Movie poster/image upload functionality
-- [ ] API endpoints for third-party integration
-- [ ] Unit tests and integration tests
-- [ ] Docker containerization
-
 ## 📞 Support
 
 If you encounter any issues or have questions, please open an issue on the GitHub repository.
